@@ -5,11 +5,10 @@ editor_options:
   chunk_output_type: inline
 ---
 
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
 
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
 
-```{r}
+```{r install pkg}
 install.packages('ggpubr')
 ```
 
@@ -20,15 +19,395 @@ suppressPackageStartupMessages(library(tidyverse))
 suppressPackageStartupMessages(library(rstatix))
 suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(rlang))
+suppressPackageStartupMessages(library(gridExtra))
+
+
+
 `%notin%` <- Negate(`%in%`)
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 ```
 
 
 
-```{r}
-raw_data <- readxl::read_excel("/Users/shuyitan/Desktop/Consulting/Consulting_Linguistics_English_Origin/Data/Rap_data_Final.xlsx")
+```{r read data}
+raw_data <- readxl::read_excel("/Users/shuyitan/Desktop/Consulting/Consulting_Linguistics_English_Origin/Data/Rap_data_Final.xlsx", sheet = 'MUEV+MIEV', skip = 1)
 ```
+
+
+
+```{r}
+str(raw_data)
+
+```
+
+Purpose: to investigate the use of English-origin verb
+
+Dependent variable: 
+MUEV or MIEV  
+
+`# of syllables before` and `# of syllables after` can be ignored, because these two are already represented in the column `Relative position in phrase`  
+0 = beginning of the phrase and 1 = end of the phrase
+
+
+Following sound 
+- Stop   
+- Nasal 
+------------
+- Fricative   
+- Affricate 
+------------
+- Approximant   
+- Lateral approximant  
+------------
+- Vowel 
+------------
+- Zero   
+These categories might need to be grouped. But there is a way to grouped them logically in linguistics. If they behave similarly and present to distinctive “behaviours”, here’s how they could be grouped: stop + nasal, fricative + affricate, stop + nasal + fricative + affricate, approximant + lateral approximant. Vowel and Zero need to stay alone, they can’t be grouped.  
+
+
+
+Interested question: 
+- if there are more MUEV in the Dictionnaire du Chilleur compared to the Fonds de données linguistiques du Québec  
+- It might be interesting to look at the band `Dead Obies` separately from (or in comparison with) the other bands. They use the MUEV much more I think and they use more English words in their lyrics – they are typically known and criticized for that. 
+
+
+
+
+For the factor Following Sound and the factor Final Sound of Verb (below in the table), the levels might need to be grouped. But there is a way to grouped them logically in linguistics. If they behave similarly and present to distinctive “behaviours”, here’s how they could be grouped: stop + nasal, fricative + affricate, stop + nasal + fricative + affricate, approximant + lateral approximant. Vowel and Zero need to stay alone, they can’t be grouped. 
+
+
+
+
+```{r}
+n_distinct(data$`Artist/band...1`)
+
+
+n_distinct(data$Title)
+
+
+nrow(data)
+
+
+table(data$`MUEV or MIEV`)
+```
+
+
+
+```{r Count of Band}
+raw_data %>% 
+  group_by(`Artist/band...1`, ') %>%  
+  tally() %>% 
+  arrange(desc(n))
+```
+
+
+
+```{r count verb}
+raw_data %>%  
+  group_by(Verb) %>%  
+  tally() %>%  
+  arrange(desc(n)) 
+
+
+raw_data %>%  
+  group_by(`Regular or irregular V in Eng`) %>%  
+  tally() %>%  
+  arrange(desc(n)) 
+```
+
+
+```{r}
+aggregated_words <- raw_data %>%
+  group_by(Verb) %>%
+  tally() %>%
+  arrange(desc(n))
+
+# Create a separate label for words with the same count
+# Aggregate them into a single string (e.g., "word1, word2, ...")
+aggregated_words <- aggregated_words %>%
+  group_by(n) %>%
+  summarise(words = paste(Verb, collapse = ", ")) %>%
+  arrange(desc(n)) 
+
+
+
+data_frame(aggregated_words)
+aggregated_words
+
+# aggregated_words <- aggregated_words %>%  
+#   top_n(5)
+# 
+# # Plot the data
+# ggplot(aggregated_words, aes(x = reorder(words, n), y = n)) +
+#   geom_bar(stat = "identity") +
+#   geom_text(aes(label = n), vjust = -0.5) + # Add count labels
+#   coord_flip() + # Optional: to flip coordinates for better readability
+#   labs(title = "Words with Top Counts",
+#        x = "Words",
+#        y = "Count") +
+#   theme_minimal()
+```
+
+```{r}
+aggregated_words$n
+```
+
+
+
+
+```{r}
+ggplot(raw_data, aes(x = `Relative position in phrase`)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  labs(
+    title = "Density Plot of Relative Position in Phrase",
+    x = "Relative Position in Phrase",
+    y = "Density"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+
+```{r relation position (density plot)}
+rp_density <- ggplot(raw_data, aes(x = `Relative position in phrase`)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  labs(
+    #title = "Density Plot of Relative Position in the Phrase",
+    x = "Relative Position in Phrase",
+    y = "Density"
+  ) +
+  theme_minimal() #+ 
+  #theme(plot.subtitle = element_text(size = 5))
+
+rp_density  
+```
+
+```{r}
+range(data$`Relative position in phrase`)
+```
+
+
+
+
+
+```{r}
+# Convert the column to a factor with the desired order
+raw_data <- raw_data %>%
+  mutate(`Position of verb in phrase` = factor(
+    `Position of verb in phrase`, 
+    levels = c("beginning", "middle", "end")
+  ))
+
+# Calculate counts and percentages
+data_summary <- raw_data %>%
+  count(`Position of verb in phrase`) %>%
+  mutate(percentage = round(n / sum(n) * 100)) 
+```
+
+
+```{r verb position (bar plot)}
+# Create the bar plot
+rp_bar <- ggplot(data_summary, aes(x = `Position of verb in phrase`, y = n)) +
+  geom_bar(stat = "identity", fill = "blue", color = "black", alpha = 0.7) +
+  geom_text(
+    aes(label = paste0(n, " (", percentage, "%)")), 
+    vjust = -0.5, 
+    size = 4
+  ) +
+  labs(
+    #title = "Bar Plot of Position of Verb in Phrase",
+    x = "Position of Verb in Phrase",
+    y = "Frequency"
+  ) +
+  theme_minimal() #+
+  #theme(plot.subtitle = element_text(size = 5))
+
+rp_bar
+```
+
+
+
+```{r}
+rp_density
+```
+
+
+```{r}
+gridExtra::grid.arrange(rp_density, rp_bar, ncol = 1, heights = c(2, 3.5))
+```
+
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+# Density Plot
+rp_density <- ggplot(raw_data, aes(x = `Relative position in phrase`)) +
+  geom_density(fill = "blue", alpha = 0.4) +
+  labs(
+    #title = "Density Plot of Relative Position in the Phrase",
+    x = "Relative Position in Phrase",
+    y = "Density",
+    subtitle = "Relative position in the phrase distribution"
+  ) +
+  theme_minimal() +
+  theme(plot.subtitle = element_text(size = 8))  # Smaller subtitle size
+
+# Bar Plot
+rp_bar <- ggplot(data_summary, aes(x = `Position of verb in phrase`, y = n)) +
+  geom_bar(stat = "identity", fill = "blue", color = "black", alpha = 0.7) +
+  geom_text(
+    aes(label = paste0(n, " (", percentage, "%)")),
+    vjust = -0.5,
+    size = 3.5,  # Adjusted text size
+    hjust = 0.5
+  ) +
+  labs(
+    #title = "Bar Plot of Position of Verb in Phrase",
+    x = "Position of Verb in Phrase",
+    y = "Frequency",
+    subtitle = "Frequency distribution of verb positions"
+  ) +
+  theme_minimal() +
+  theme(plot.subtitle = element_text(size = 8))  # Smaller subtitle size
+
+# Adjust the layout
+layout <- matrix(c(1, 2), ncol = 1)
+gridExtra::grid.arrange(rp_density, rp_bar, layout_matrix = layout, heights = c(5, 15))
+
+
+
+
+```
+
+```{r}
+rp_bar
+```
+
+
+
+
+
+```{r following sound count}
+raw_data %>% 
+  group_by(`Following sound`) %>%  
+  tally()
+```
+check if significantly more 
+
+grouping 
+
+But there is a way to grouped them logically in linguistics. If they behave similarly and present to distinctive “behaviours”, here’s how they could be grouped: stop + nasal, fricative + affricate, stop + nasal + fricative + affricate, approximant + lateral approximant. Vowel and Zero need to stay alone, they can’t be grouped. 
+
+
+```{r add following sound grouping}
+data <- raw_data %>%  
+  mutate(
+    SoundGroup_1 = case_when(
+      `Following sound` %in% c("stop", "nasal") ~ "stop + nasal",
+      `Following sound` %in% c("fricative", "affricate") ~ "fricative + affricate",
+      #`Following sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "stop + nasal + fricative + affricate",
+      `Following sound` %in% c("approximant", "lateral approximant") ~ "approximant + lateral approximant",
+      `Following sound` %in% c("vowel", "zero") ~ `Following sound`, # Keep "vowel" and "zero" as is
+      TRUE ~ "Other" # For any unexpected value
+    ) ,
+    SoundGroup_2 = case_when( 
+      `Following sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "stop + nasal + fricative + affricate", 
+      `Following sound` %in% c("approximant", "lateral approximant") ~ "approximant + lateral approximant",
+      `Following sound` %in% c("vowel", "zero") ~ `Following sound`, #  
+      TRUE ~ "Other" # For any unexpected value
+    )
+  )
+
+```
+
+```{r additional followinh sound count}
+data %>% 
+  group_by(`SoundGroup_1`) %>%  
+  tally()
+
+
+data %>% 
+  group_by(`SoundGroup_2`) %>%  
+  tally()
+```
+
+
+```{r other english item}
+data %>%  
+  group_by(`Presence of other English items in phrase`) %>% 
+  tally()
+```
+check the pattern along with other linguistic factors 
+
+```{r eng morphology}
+data %>%  
+  group_by(`Would have ENG morphology`) %>% 
+  tally()
+```
+```{r}
+data <- data %>%  
+    mutate(
+    `In Fonds de données linguistiques du Québec (FDLQ)` = as.logical(`In Fonds de données linguistiques du Québec (FDLQ)`)
+  )
+
+
+data %>%
+  summarize(
+    DC_TRUE = sum(`In Dictionnaire du Chilleur (DC)`),
+    FDLQ_TRUE = sum(`In Fonds de données linguistiques du Québec (FDLQ)`),
+    Both_TRUE = sum(`In Dictionnaire du Chilleur (DC)` & `In Fonds de données linguistiques du Québec (FDLQ)`)
+  )
+
+```
+
+
+
+```{r}
+data <- data %>%
+  mutate(verb_def = case_when(
+    `Verb category` == 1 ~ 'simple verb',
+    `Verb category` == 3 ~ 'closed vowel + semivowel',
+    `Verb category` == 4 ~ 'final syllabic [l]',
+    `Verb category` == 5 ~ 'homophony, zero derivation, truncated, verlanized, or borrowed as is',
+    TRUE ~ NA_character_  # Default case
+  ))
+
+data %>%  
+  group_by(`Verb category`) %>%  
+  tally()
+
+                  
+
+```
+
+
+
+```{r}
+data
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
