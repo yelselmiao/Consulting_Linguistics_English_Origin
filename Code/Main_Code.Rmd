@@ -148,26 +148,6 @@ aggregated_words
 #   theme_minimal()
 ```
 
-```{r}
-aggregated_words$n
-```
-
-
-
-
-```{r}
-ggplot(raw_data, aes(x = `Relative position in phrase`)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  labs(
-    title = "Density Plot of Relative Position in Phrase",
-    x = "Relative Position in Phrase",
-    y = "Density"
-  ) +
-  theme_minimal()
-```
-
-
-
 
 
 ```{r relation position (density plot)}
@@ -183,12 +163,6 @@ rp_density <- ggplot(raw_data, aes(x = `Relative position in phrase`)) +
 
 rp_density  
 ```
-
-```{r}
-range(data$`Relative position in phrase`)
-```
-
-
 
 
 
@@ -229,71 +203,10 @@ rp_bar
 
 
 
-```{r}
-rp_density
-```
-
-
-```{r}
-gridExtra::grid.arrange(rp_density, rp_bar, ncol = 1, heights = c(2, 3.5))
-```
-
-
-```{r}
-library(ggplot2)
-library(gridExtra)
-
-# Density Plot
-rp_density <- ggplot(raw_data, aes(x = `Relative position in phrase`)) +
-  geom_density(fill = "blue", alpha = 0.4) +
-  labs(
-    #title = "Density Plot of Relative Position in the Phrase",
-    x = "Relative Position in Phrase",
-    y = "Density",
-    subtitle = "Relative position in the phrase distribution"
-  ) +
-  theme_minimal() +
-  theme(plot.subtitle = element_text(size = 8))  # Smaller subtitle size
-
-# Bar Plot
-rp_bar <- ggplot(data_summary, aes(x = `Position of verb in phrase`, y = n)) +
-  geom_bar(stat = "identity", fill = "blue", color = "black", alpha = 0.7) +
-  geom_text(
-    aes(label = paste0(n, " (", percentage, "%)")),
-    vjust = -0.5,
-    size = 3.5,  # Adjusted text size
-    hjust = 0.5
-  ) +
-  labs(
-    #title = "Bar Plot of Position of Verb in Phrase",
-    x = "Position of Verb in Phrase",
-    y = "Frequency",
-    subtitle = "Frequency distribution of verb positions"
-  ) +
-  theme_minimal() +
-  theme(plot.subtitle = element_text(size = 8))  # Smaller subtitle size
-
-# Adjust the layout
-layout <- matrix(c(1, 2), ncol = 1)
-gridExtra::grid.arrange(rp_density, rp_bar, layout_matrix = layout, heights = c(5, 15))
-
-
-
-
-```
-
-```{r}
-rp_bar
-```
-
-
-
-
-
 ```{r following sound count}
 raw_data %>% 
   group_by(`Following sound`) %>%  
-  tally()
+  tally() 
 ```
 check if significantly more 
 
@@ -335,17 +248,192 @@ data %>%
 ```
 
 
+
+```{r}
+
+
+
+ggplot(data, aes(x = SoundGroup_1)) +
+  geom_bar(fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Bar Chart of SoundGroup_1",
+    x = "Sound Group",
+    y = "Count"
+  ) +
+  theme_minimal() + 
+    theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+
+
+ggplot(data, aes(x = SoundGroup_2)) +
+  geom_bar(fill = "blue", color = "black", alpha = 0.7) +
+  labs(
+    title = "Bar Chart of SoundGroup_1",
+    x = "Sound Group",
+    y = "Count"
+  ) +
+  theme_minimal() + 
+    theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+```{r}
+
+
+# Precompute counts and percentages, and order by count
+data_summary <- data %>%
+  count(`Following sound`, name = "n") %>%
+  mutate(
+    percentage = n / sum(n) * 100, # Calculate percentage
+    `Following sound` = factor(`Following sound`, levels = `Following sound`[order(-n)]) # Order factor
+  )
+
+# Create the bar plot with labels
+ggplot(data_summary, aes(x = `Following sound`, y = n)) +
+  geom_bar(stat = "identity", fill = "blue", color = "black", alpha = 0.7) +
+  geom_text(
+    aes(label = paste0(n, " (", round(percentage, 1), "%)")), # Add count and percentage
+    vjust = -0.5, size = 3
+  ) +
+  labs(
+    title = "Following Sound",
+    x = "Sound Group",
+    y = "Count"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = -15, hjust = 0.2)
+  )
+
+```
+
+```{r}
+ggplot(data_summary, aes(x = SoundGroup_1, y = n, fill = `Following sound`)) +
+  geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") +
+  geom_text(
+    aes(
+      label = ifelse(n > 5, paste0(`Following sound`, ": ", n), ""), # Only show labels if n > 5
+      vjust = ifelse(n > 20, 0.5, -0.5) # Adjust vertical alignment for small segments
+    ),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  labs(
+    title = "Stacked Bar Chart of Sound Groups with Counts",
+    x = "Sound Group",
+    y = "Count",
+    fill = "Following Sound"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "top"
+  )
+```
+
+```{r}
+ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) +
+  geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") +
+  geom_text(
+    aes(
+      label = ifelse(n > 5, paste0(`Following sound`, ": ", n), "")
+    ),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  labs(
+    title = "Horizontal Stacked Bar Chart of Sound Groups with Counts",
+    x = "Count",
+    y = "Sound Group",
+    fill = "Following Sound"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top"
+  )
+```
+
+
+```{r}
+ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) +
+  geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") +
+  geom_text(
+    aes(
+      x = n + 1, 
+      label = case_when(
+        SoundGroup_1 == "fricative + affricate" & `Following sound` == "affricate" ~ paste0("affricate: ", n),
+        SoundGroup_1 == "approximant + lateral approximant" & `Following sound` == "approximant" ~ paste0("approximate: ", n),
+        n > 5 ~ paste0(`Following sound`, ": ", n), # Generic labels for other groups
+        TRUE ~ "" # Do not label very small values
+      )
+    ),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  labs(
+    title = "Horizontal Stacked Bar Chart of Sound Groups with Customized Labels",
+    x = "Count",
+    y = "Sound Group",
+    fill = "Following Sound"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "top"
+  )
+```
+
+
+
+```{r}
+ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) + 
+  geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") + 
+  geom_text( 
+    aes( 
+      label = case_when( 
+        SoundGroup_1 == "fricative + affricate" & `Following sound` == "affricate" ~ paste0("affricate: ", n), 
+        SoundGroup_1 == "approximant + lateral approximant" & `Following sound` == "approximant" ~ paste0("approximate: ", n), 
+        n > 5 ~ paste0(`Following sound`, ": ", n), # Generic labels for other groups 
+        TRUE ~ "" # Do not label very small values 
+      ), 
+      x = case_when(
+        `Following sound` == "affricate" ~ n + 18, # Move only affricate labels
+        `Following sound` == "approximant" ~ n + 25, # Move only approximate labels
+        TRUE ~ n # Default no adjustment
+      ) 
+    ), 
+    position = position_stack(vjust = 0.5), 
+    size = 3 
+  ) + 
+  labs( 
+   # title = "Count of Following Sounds", 
+    x = "Count", 
+    y = "Sound Group", 
+    fill = "Type of Following Sound" 
+  ) + 
+  theme_minimal() + 
+  theme( 
+    legend.position = "top" ,
+    legend.text = element_text(size = 7.5)
+  )
+```
+
+
+
 ```{r other english item}
 data %>%  
   group_by(`Presence of other English items in phrase`) %>% 
-  tally()
+  tally() %>%  
+  mutate(perc = n/sum(n))
 ```
 check the pattern along with other linguistic factors 
 
 ```{r eng morphology}
 data %>%  
   group_by(`Would have ENG morphology`) %>% 
-  tally()
+  tally() %>% 
+  mutate(perc = n/sum(n))
 ```
 ```{r}
 data <- data %>%  
@@ -354,11 +442,20 @@ data <- data %>%
   )
 
 
-data %>%
-  summarize(
-    DC_TRUE = sum(`In Dictionnaire du Chilleur (DC)`),
-    FDLQ_TRUE = sum(`In Fonds de données linguistiques du Québec (FDLQ)`),
-    Both_TRUE = sum(`In Dictionnaire du Chilleur (DC)` & `In Fonds de données linguistiques du Québec (FDLQ)`)
+data %>%  
+  summarize(     
+    DC_TRUE = sum(`In Dictionnaire du Chilleur (DC)`),     
+    FDLQ_TRUE = sum(`In Fonds de données linguistiques du Québec (FDLQ)`),     
+    Both_TRUE = sum(`In Dictionnaire du Chilleur (DC)` & `In Fonds de données linguistiques du Québec (FDLQ)`),     
+    Total = nrow(data) # Use nrow(data) instead of summing counts
+  ) %>% 
+  mutate(
+    Percent_DC_TRUE = DC_TRUE / Total * 100,
+    Percent_FDLQ_TRUE = FDLQ_TRUE / Total * 100,
+    Percent_Both_TRUE = Both_TRUE / Total * 100,
+    DC_Pct = paste0(DC_TRUE, " (", round(Percent_DC_TRUE, 2), "%)"),
+    FDLQ_Pct = paste0(FDLQ_TRUE, " (", round(Percent_FDLQ_TRUE, 2), "%)"),
+    Both_Pct = paste0(Both_TRUE, " (", round(Percent_Both_TRUE, 2), "%)")
   )
 
 ```
@@ -368,16 +465,17 @@ data %>%
 ```{r}
 data <- data %>%
   mutate(verb_def = case_when(
-    `Verb category` == 1 ~ 'simple verb',
-    `Verb category` == 3 ~ 'closed vowel + semivowel',
-    `Verb category` == 4 ~ 'final syllabic [l]',
-    `Verb category` == 5 ~ 'homophony, zero derivation, truncated, verlanized, or borrowed as is',
+    `Verb category` == 1 ~ "simple verb",
+    `Verb category` == 4 ~ "closed vowel + semivowel",
+    `Verb category` == 5 ~ "final syllabic [l]",
+    `Verb category` == 6 ~ "homophony, zero derivation, truncated, verlanized, or borrowed as is",
     TRUE ~ NA_character_  # Default case
   ))
 
-data %>%  
-  group_by(`Verb category`) %>%  
-  tally()
+data %>%
+  group_by(`Verb category`, verb_def) %>%
+  tally()  %>% 
+  mutate(perc = n/nrow(data))
 
                   
 
@@ -385,8 +483,14 @@ data %>%
 
 
 
+
 ```{r}
-data
+table_regularity <- table(data$`MUEV or MIEV`, data$`Regular or irregular V in Eng`)
+chisq.test(table_regularity)
+```
+
+```{r}
+fisher.test(table_regularity)
 ```
 
 
