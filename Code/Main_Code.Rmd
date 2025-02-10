@@ -9,7 +9,7 @@ editor_options:
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
 
 ```{r install pkg}
-install.packages('ggpubr')
+# install.packages('ggpubr')
 ```
 
 
@@ -20,7 +20,7 @@ suppressPackageStartupMessages(library(rstatix))
 suppressPackageStartupMessages(library(ggpubr))
 suppressPackageStartupMessages(library(rlang))
 suppressPackageStartupMessages(library(gridExtra))
-
+suppressPackageStartupMessages(library(rcompanion))
 
 
 `%notin%` <- Negate(`%in%`)
@@ -38,22 +38,6 @@ raw_data <- readxl::read_excel("/Users/shuyitan/Desktop/Consulting/Consulting_Li
 ```{r Str data}
 str(raw_data)
 ```
-
-Purpose: to investigate the use of English-origin verb
-
-Dependent variable: 
-MUEV or MIEV  
-
-
-Interested question: 
-- if there are more MUEV in the Dictionnaire du Chilleur compared to the Fonds de données linguistiques du Québec  
-- It might be interesting to look at the band `Dead Obies` separately from (or in comparison with) the other bands. They use the MUEV much more I think and they use more English words in their lyrics – they are typically known and criticized for that. 
-
-
-
-
-For the factor Following Sound and the factor Final Sound of Verb (below in the table), the levels might need to be grouped. But there is a way to grouped them logically in linguistics. If they behave similarly and present to distinctive “behaviours”, here’s how they could be grouped: stop + nasal, fricative + affricate, stop + nasal + fricative + affricate, approximant + lateral approximant. Vowel and Zero need to stay alone, they can’t be grouped. 
-
 
 
 
@@ -88,7 +72,7 @@ raw_data %>%
 
 
 
-```{r count verb}
+```{r count regularity}
 raw_data %>%  
   group_by(Verb) %>%  
   tally() %>%  
@@ -175,6 +159,8 @@ data_summary <- raw_data %>%
   tally(name = "Count") %>%
   mutate(Percentage = round(Count / sum(Count) * 100, digits = 1)) %>%
   arrange(desc(Count)) 
+
+data_summary
 ```
 
 
@@ -207,11 +193,8 @@ raw_data %>%
   mutate(Percentage = round(Count / sum(Count) * 100, digits = 1)) %>% 
   arrange(desc(Count))
 ```
-check if significantly more 
 
-grouping 
 
-But there is a way to grouped them logically in linguistics. If they behave similarly and present to distinctive “behaviours”, here’s how they could be grouped: stop + nasal, fricative + affricate, stop + nasal + fricative + affricate, approximant + lateral approximant. Vowel and Zero need to stay alone, they can’t be grouped. 
 
 
 ```{r add following sound grouping}
@@ -248,7 +231,7 @@ data %>%
 
 
 
-```{r sound group visual}
+```{r following sound group visual}
 
 ggplot(data, aes(x = SoundGroup_1)) +
   geom_bar(fill = "blue", color = "black", alpha = 0.7) +
@@ -306,39 +289,10 @@ ggplot(data_summary, aes(x = `Following sound`, y = n)) +
 
 ```
 
-```{r following sound - stacked visual - horizontal}
-
-data_summary <- data %>% 
-  group_by(`SoundGroup_1`, `Following sound`) %>%  
-  tally()
-
-ggplot(data_summary, aes(x = SoundGroup_1, y = n, fill = `Following sound`)) +
-  geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") +
-  geom_text(
-    aes(
-      label = ifelse(n > 5, paste0(`Following sound`, ": ", n), ""), # Only show labels if n > 5
-      vjust = ifelse(n > 20, 0.5, -0.5) # Adjust vertical alignment for small segments
-    ),
-    position = position_stack(vjust = 0.5),
-    size = 3
-  ) +
-  labs(
-    title = "Stacked Bar Chart of Sound Groups with Counts",
-    x = "Sound Group",
-    y = "Count",
-    fill = "Following Sound"
-  ) +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "top"
-  )
-```
 
 
 
-
-```{r following sound - stacked visual - vertical}
+```{r following sound - stacked visual - vertical, fig.width=11, fig.height= 5}
 ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) + 
   geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") + 
   geom_text( 
@@ -350,8 +304,8 @@ ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) +
         TRUE ~ "" # Do not label very small values 
       ), 
       x = case_when(
-        `Following sound` == "affricate" ~ n + 18, # Move only affricate labels
-        `Following sound` == "approximant" ~ n + 25, # Move only approximate labels
+        `Following sound` == "affricate" ~ n + 10, # Move only affricate labels
+        `Following sound` == "approximant" ~ n + 15, # Move only approximate labels
         TRUE ~ n # Default no adjustment
       ) 
     ), 
@@ -361,7 +315,7 @@ ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) +
   labs( 
    # title = "Count of Following Sounds", 
     x = "Count", 
-    y = "Sound Group", 
+    y = "Following Sound Group", 
     fill = "Type of Following Sound" 
   ) + 
   theme_minimal() + 
@@ -370,6 +324,69 @@ ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) +
     legend.text = element_text(size = 7.5)
   )
 ```
+
+
+
+
+
+```{r final sound - viz, fig.width=11, fig.height= 5}
+
+data <- data %>%
+  mutate(
+    FinalSoundGroup_1_text = case_when(
+      `Final sound` %in% c("stop", "nasal") ~ "stop + nasal",
+      `Final sound` %in% c("fricative", "affricate") ~ "fricative + affricate",
+      `Final sound` %in% c("approximant", "lateral approximant") ~ "approximant + lateral approximant",
+      `Final sound` == "vowel" ~ "vowel",
+      TRUE ~ "Other" 
+    ))
+
+data_summary_fsgt <- data %>% 
+  group_by(`FinalSoundGroup_1_text`, `Final sound`) %>%  
+  tally()
+
+
+ggplot(data_summary_fsgt, aes(y = FinalSoundGroup_1_text, x = n, fill = `Final sound`)) + 
+  geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") + 
+  geom_text( 
+    aes( 
+      label = case_when( 
+        FinalSoundGroup_1_text == "fricative + affricate" & `Final sound` == "affricate" ~ paste0("affricate: ", n), 
+        FinalSoundGroup_1_text == "approximant + lateral approximant" & `Final sound` == "approximant" ~ paste0("approximate: ", n), 
+        n > 5 ~ paste0(`Final sound`, ": ", n), # Generic labels for other groups 
+        TRUE ~ "" # Do not label very small values 
+      ), 
+      x = case_when(
+        #`Final sound` == "vowel" ~ n + 55, # Move only affricate labels
+        `Final sound` == "nasal" ~ n + 35,
+        `Final sound` == "affricate" ~ n + 45, # Move only affricate labels
+        `Final sound` == "approximant" ~ n + 38, # Move only approximate labels
+        TRUE ~ n # Default no adjustment
+      ) 
+    ), 
+    position = position_stack(vjust = 0.5), 
+    size = 3 
+  ) + 
+  labs( 
+   # title = "Count of Following Sounds", 
+    x = "Count", 
+    y = "Final Sound Group", 
+    fill = "Type of Final Sound" 
+  ) + 
+  theme_minimal() + 
+  theme( 
+    legend.position = "top" ,
+    legend.text = element_text(size = 7.5)
+  )
+```
+
+
+
+
+
+
+
+
 
 
 
@@ -411,6 +428,10 @@ data %>%
     FDLQ_Pct = paste0(FDLQ_TRUE, " (", round(Percent_FDLQ_TRUE, 2), "%)"),
     Both_Pct = paste0(Both_TRUE, " (", round(Percent_Both_TRUE, 2), "%)")
   )
+
+
+# data %>%  filter(DC == FALSE & FDLQ == FALSE)
+
 
 ```
 
@@ -519,24 +540,9 @@ ggplot(tb_morphology_df, aes(x = Independent, y = Count, fill = Dependent)) +
   scale_fill_brewer(palette = "Set2")
 ```
 
-```{r English morpholology-pairwise}
-
-tb_mor <- table(data$`Would have ENG morphology`, data$`MUEV or MIEV`)
-pairwiseNominalIndependence(tb_mor, method = "fdr")
 
 
-
-tb_mor <- table(data$`MUEV or MIEV`, data$`Would have ENG morphology`)
-pairwiseNominalIndependence(tb_mor, method = "fdr")
-
-
-chisq.test(tb_morphology)
-
-```
-
-
-
-```{r Position of verb - test and Viz}
+```{r Position of verb - test}
 # Create a contingency table
 tb_position <- table(data$`MUEV or MIEV`, data$`Position of verb in phrase`)
 
@@ -553,52 +559,40 @@ tb_position_df$Independent <- factor(tb_position_df$Independent, levels = c("beg
 # Perform Fisher's Exact Test
 fisher_result <- fisher.test(tb_position)
 
+fisher_result
 
-ggplot(tb_position_df, aes(x = Independent, y = Count, fill = Dependent)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  geom_text(
-    aes(label = Count),
-    position = position_dodge(width = 0.9),
-    vjust = 0.1,
-    size = 4
-  ) +
-  labs(
-    #title = "Comparison of MUEV or MIEV with Position of Verb in Phrase",
-    # subtitle = paste(
-    #   "Fisher's Exact Test p-value = ",
-    #   format.pval(fisher_result$p.value, digits = 3, eps = 0.001)
-    # ),
-    x = "Position of Verb in Phrase",
-    y = "Count",
-    fill = "MUEV or MIEV"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(size = 14, face = "bold"),
-    plot.subtitle = element_text(size = 12),
-    legend.position = "top"
-  ) +
-  scale_fill_brewer(palette = "Set2")
+
+# ggplot(tb_position_df, aes(x = Independent, y = Count, fill = Dependent)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   geom_text(
+#     aes(label = Count),
+#     position = position_dodge(width = 0.9),
+#     vjust = 0.1,
+#     size = 4
+#   ) +
+#   labs(
+#     #title = "Comparison of MUEV or MIEV with Position of Verb in Phrase",
+#     # subtitle = paste(
+#     #   "Fisher's Exact Test p-value = ",
+#     #   format.pval(fisher_result$p.value, digits = 3, eps = 0.001)
+#     # ),
+#     x = "Position of Verb in Phrase",
+#     y = "Count",
+#     fill = "MUEV or MIEV"
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(size = 14, face = "bold"),
+#     plot.subtitle = element_text(size = 12),
+#     legend.position = "top"
+#   ) +
+#   scale_fill_brewer(palette = "Set2")
 ```
 
 
-```{r}
+```{r position - pairwise}
 pairwise_fisher_test(tb_position, p.adjust.method = "bonferroni")
 ```
-
-
-
-```{r}
-tb_position_2 <- table(data$`Position of verb in phrase`, data$`MUEV or MIEV`)
-
-fisher.test(tb_position_2)
-
-pairwise_fisher_test(tb_position, p.adjust.method = "bonferroni")
-
-pairwise_fisher_test(tb_position_2, p.adjust.method = "bonferroni")
-
-```
-
 
 
 
@@ -607,65 +601,62 @@ pairwise_fisher_test(tb_position_2, p.adjust.method = "bonferroni")
 ```{r Relative Position - correlation}
 # The point biserial correlation quantifies the strength and direction of the relationship between the continuous variable (Relative position in phrase) and the binary dependent variable (MUEV or MIEV).
 
+data <- data %>%  
+  mutate(dependent = ifelse(`MUEV or MIEV` == 'MUEV', 1, 0)) 
 
-cor_result <- cor.test(data$`Relative position in phrase`, data$`MUEV or MIEV`)
+
+cor_result <- cor.test(data$dependent, data$`Relative position in phrase`)
 
 cor_result
-
-# There is a statistically significant weak positive correlation between Relative position in phrase and MUEV or MIEV (with a correlation coefficient of 0.206), suggesting that as the relative position of the verb in the phrase changes, the occurrence of MUEV increases slightly.
-
-
-# The positive correlation coefficient of 0.206 suggests that as the relative position of the verb in the phrase increases, the likelihood of MUEV (coded as 1) also increases. In other words, a higher relative position of the verb in the phrase is associated with an increased likelihood of the event corresponding to MUEV. So, the direction of the change is an increase in MUEV as the relative position of the verb in the phrase increases.
 ```
 
 
-
-
-```{r}
-shapiro.test(data$`Relative position in phrase`)
-ks.test(data$`Relative position in phrase`, "pnorm", mean(data$`Relative position in phrase`), sd(data$`Relative position in phrase`))
-```
-
-
-
-```{r}
+```{r position of verb}
 data <- data %>%
   mutate(`Position of verb in phrase` = factor(`Position of verb in phrase`, 
                                                 levels = c("beginning", "middle", "end"), 
                                                 ordered = TRUE))
 
+
+addmargins(table(data$`MUEV or MIEV`, data$`Position of verb in phrase`))
+prop.table(table(data$`MUEV or MIEV`, data$`Position of verb in phrase`), margin = 2) 
+
+
 # Create a contingency table
-contingency_table <- table(data$`Position of verb in phrase`, data$`MUEV or MIEV`)
+position_tb <- table(data$`Position of verb in phrase`, data$`MUEV or MIEV`)
 
-fisher.test(contingency_table)
+fisher.test(position_tb)
 
 
-mosaicplot(contingency_table, 
-           main="Association between Position of Verb in Phrase and MUEV or MIEV",
-           color=TRUE)
+# mosaicplot(contingency_table, 
+#            main="Association between Position of Verb in Phrase and MUEV or MIEV",
+#            color=TRUE)
+
+
+rcompanion::pairwiseNominalIndependence(table(data$`Position of verb in phrase`, data$`MUEV or MIEV`))
+
 
 ```
 
 
-```{r}
-# Create a contingency table
-contingency_table <- table(data$`Position of verb in phrase`, data$`MUEV or MIEV`)
+
+
+```{r contingency table - following sound group 1}
+data <- data %>%
+  mutate(`SoundGroup_1` = factor(`SoundGroup_1`, 
+                                                levels = c("stop + nasal", "fricative + affricate", "approximant + lateral approximant", "vowel", "zero"), 
+                                                ordered = TRUE))
+
+
+addmargins(table(data$`MUEV or MIEV`, data$`SoundGroup_1`))
+round(prop.table(table(data$`MUEV or MIEV`, data$`SoundGroup_1`), margin = 2)* 100 , 1)
 ```
-
-```{r}
-tb_fs <- table(data$`Following sound`, data$`MUEV or MIEV`)
-fisher.test(tb_fs)
-
-pairwiseNominalIndependence(tb_sg_2, method = "fdr")
-```
-
-
 
 
 
 
 ```{r Following Sound Grouping}
-data <- raw_data %>%
+data <- data %>%
   mutate(
     SoundGroup_1 = case_when(
       `Following sound` %in% c("stop", "nasal") ~ "group 1",
@@ -677,10 +668,10 @@ data <- raw_data %>%
       TRUE ~ "Other" 
     ),
     SoundGroup_2 = case_when(
-      `Following sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "group 1",
-      `Following sound` %in% c("approximant", "lateral approximant") ~ "group 2",
-      `Following sound` == "vowel" ~ "group 3",
-      `Following sound` == "zero" ~ "group 4",
+      `Following sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "group 1 & group 2",
+      `Following sound` %in% c("approximant", "lateral approximant") ~ "group 3",
+      `Following sound` == "vowel" ~ "group 4",
+      `Following sound` == "zero" ~ "group 5",
       # "vowel" and "zero" as group 4
       TRUE ~ "Other"
     )
@@ -694,6 +685,7 @@ data <- raw_data %>%
 
 
 ```{r MUEV/MIEV vs SoundGroup_1 - test}
+
 tb_sg_1 <- table(data$`SoundGroup_1`, data$`MUEV or MIEV`)
 chisq.test(tb_sg_1)
 
@@ -719,65 +711,56 @@ pw_sg_2 %>%
 ```
 
 
+
+
 ```{r MUEV/MIEV vs SoundGroup_1 - viz}
-# Set up a layout with custom column widths (left plot wider, right plot with more space)
-layout(matrix(c(1, 2), nrow = 1, ncol = 2), widths = c(3, 2))  # 3 parts for left plot, 1.5 for right plot
+data_prop_sg_1 <- data %>%
+  count(SoundGroup_1, `MUEV or MIEV`) %>%
+  group_by(SoundGroup_1) %>%
+  mutate(prop = n / sum(n),
+         prop_label = scales::percent(prop))  # Create a label column for percentages
 
-# Create the mosaic plot in the first (wider) space
-mosaicplot(SoundGroup_1 ~ `MUEV or MIEV`, data = data,
-           main=" ",
-           xlab = "Following Sound Group", 
-           ylab = "MUEV or MIEV", 
-           color = TRUE,  # Use default color
-           mar = c(6, 4, 4, 2)  # Adjust margins to make space for the legend
-)
+# Create the horizontal stacked bar chart with percentage labels
+ggplot(data_prop_sg_1, aes(y = SoundGroup_1, x = prop, fill = `MUEV or MIEV`)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(label = prop_label), position = position_stack(vjust = 0.5)) +  # Add percentage labels
+  scale_x_continuous(labels = scales::percent) +  # Convert x-axis to percentage
+  labs(
+    x = "Proportion",
+    y = "Following Sound Group",
+    fill = "Category"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")  + 
+  guides(fill = guide_legend(title = NULL))  # Remove legend 
 
-# Create the second plot for the legend in the right (slightly wider) space
-plot.new()  # Empty plot for legend
-legend("center",  # Center the legend in the empty plot
-       legend = c("group 1: stop + nasal", 
-                  "group 2: fricative + affricate", 
-                  "group 3: approximant + lateral approximant", 
-                  "group 4: vowel",
-                  "group 5: zero"),
-       title = "Group Details", 
-       xpd = TRUE,  # Ensures the legend stays outside the plot area
-       #fill = c("skyblue", "orange", "green", "pink"),  # Custom colors for legend
-       border = "black",
-       cex = 0.7)  # Add border around legend for clarity
-
-# Reset the layout to default
-layout(1)
 ```
 
 
 ```{r MUEV/MIEV vs SoundGroup_2 - viz}
-# Set up a layout with custom column widths (left plot wider, right plot with more space)
-layout(matrix(c(1, 2), nrow = 1, ncol = 2), widths = c(3, 2))  # 3 parts for left plot, 1.5 for right plot
+data_prop_sg_2 <- data %>%
+  count(SoundGroup_2, `MUEV or MIEV`) %>%
+  group_by(SoundGroup_2) %>%
+  mutate(prop = n / sum(n),
+         prop_label = scales::percent(prop))  # Create a label column for percentages
 
-# Create the mosaic plot in the first (wider) space
-mosaicplot(SoundGroup_2 ~ `MUEV or MIEV`, data = data,
-           main=" ",
-           xlab = "Following Sound Group", 
-           ylab = "MUEV or MIEV", 
-           color = TRUE,  # Use default color
-           mar = c(6, 4, 4, 2)  # Adjust margins to make space for the legend
-)
-
-
-plot.new()  # Empty plot for legend
-legend("center",  # Center the legend in the empty plot
-       legend = c("group 1: stop + nasal + fricative + affricate", 
-                  "group 2: approximant + lateral approximant", 
-                  "group 3: vowel", 
-                  "group 4: zero"),
-       title = "Group Details", 
-       xpd = TRUE,  # Ensures the legend stays outside the plot area
-       #fill = c("skyblue", "orange", "green", "pink"),  # Custom colors for legend
-       border = "black",
-       cex = 0.7)  # Add border around legend for clarity
-
+# Create the horizontal stacked bar chart with percentage labels
+ggplot(data_prop_sg_2, aes(y = SoundGroup_2, x = prop, fill = `MUEV or MIEV`)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(label = prop_label), position = position_stack(vjust = 0.5)) +  # Add percentage labels
+  scale_x_continuous(labels = scales::percent) +  # Convert x-axis to percentage
+  labs(
+    x = "Proportion",
+    y = "Following Sound Group",
+    fill = "Category"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")  + 
+  guides(fill = guide_legend(title = NULL))  # Remove legend titlesaki
 ```
+
+
+
 
 
 ```{r Final Sound Grouping}
@@ -788,15 +771,12 @@ data <- data %>%
       `Final sound` %in% c("fricative", "affricate") ~ "group 2",
       `Final sound` %in% c("approximant", "lateral approximant") ~ "group 3",
       `Final sound` == "vowel" ~ "group 4",
-      `Final sound` == "zero" ~ "group 5",
-      # "vowel" and "zero" as group 4
       TRUE ~ "Other" 
     ),
     FinalSoundGroup_2 = case_when(
-      `Final sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "group 1",
-      `Final sound` %in% c("approximant", "lateral approximant") ~ "group 2",
-      `Final sound` == "vowel" ~ "group 3",
-      `Final sound` == "zero" ~ "group 4",
+      `Final sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "group 1 & group 2",
+      `Final sound` %in% c("approximant", "lateral approximant") ~ "group 3",
+      `Final sound` == "vowel" ~ "group 4",
       # "vowel" and "zero" as group 4
       TRUE ~ "Other"
     )
@@ -804,59 +784,103 @@ data <- data %>%
 ```
 
 
-```{r}
-# Set up a layout with custom column widths (left plot wider, right plot with more space)
-layout(matrix(c(1, 2), nrow = 1, ncol = 2), widths = c(5, 4))  # 3 parts for left plot, 1.5 for right plot
-
-# Create the mosaic plot in the first (wider) space
-mosaicplot(FinalSoundGroup_2 ~ `MUEV or MIEV`, data = data,
-           main=" ",
-           xlab = "Finak Sound Group", 
-           ylab = "MUEV or MIEV", 
-           color = TRUE,  # Use default color
-           mar = c(6, 4, 4, 2)  # Adjust margins to make space for the legend
-)
 
 
-plot.new()  # Empty plot for legend
-legend("center",  # Center the legend in the empty plot
-       legend = c("group 1: stop + nasal + fricative + affricate", 
-                  "group 2: approximant + lateral approximant", 
-                  "group 3: vowel", 
-                  "group 4: zero"),
-       title = "Group Details", 
-       xpd = TRUE,  # Ensures the legend stays outside the plot area
-       #fill = c("skyblue", "orange", "green", "pink"),  # Custom colors for legend
-       border = "black",
-       cex = 0.7)  # Add border around legend for clarity
-
-
-
-```
-
-```{r}
-mosaicplot(`In Dictionnaire du Chilleur (DC)`~ `MUEV or MIEV`, data = data,
-           main=" ",
-           xlab = "Finak Sound Group", 
-           ylab = "MUEV or MIEV", 
-           color = TRUE,  # Use default color
-           mar = c(6, 4, 4, 2))  # Adj
-           
-           
-data$`In Dictionnaire du Chilleur (DC)`
+```{r Contingency Table: Final Sound Group 1}
+addmargins(table(data$`MUEV or MIEV`, data$FinalSoundGroup_1))
+prop.table(table(data$`MUEV or MIEV`, data$FinalSoundGroup_1), margin = 2) 
 ```
 
 
+```{r MUEV/MIEV vs FinalSoundGroup_1 - test}
+tb_fsg_1 <- table(data$FinalSoundGroup_1, data$`MUEV or MIEV`)
+chisq.test(tb_fsg_1)
+
+pw_stb_fsg_1g_1 <- pairwiseNominalIndependence(tb_fsg_1, method = "fdr")
+pw_stb_fsg_1g_1 %>% 
+  select(Comparison, p.adj.Chisq) %>% 
+  mutate(sigficance = ifelse(p.adj.Chisq < 0.05, TRUE, FALSE)) %>% 
+  filter(sigficance == TRUE)
+
+```
+
+```{r MUEV/MIEV vs FinalSoundGroup_2 - test}
+tb_fsg_2 <- table(data$FinalSoundGroup_2, data$`MUEV or MIEV`)
+chisq.test(tb_fsg_2)
+
+pw_stb_fsg_1g_2 <- pairwiseNominalIndependence(tb_fsg_2, method = "fdr")
+pw_stb_fsg_1g_2 %>% 
+  select(Comparison, p.adj.Chisq) %>% 
+  mutate(sigficance = ifelse(p.adj.Chisq < 0.05, TRUE, FALSE)) %>% 
+  filter(sigficance == TRUE)
+```
+```{r Final Sound Contingency Tables}
+tb_fsg_1 
+
+tb_fsg_2
+```
+
+
+```{r MUEV/MIEV vs FinalSoundGroup_1 - viz}
+data_prop <- data %>%
+  count(FinalSoundGroup_1, `MUEV or MIEV`) %>%
+  group_by(FinalSoundGroup_1) %>%
+  mutate(prop = n / sum(n),
+         prop_label = scales::percent(prop))  # Create a label column for percentages
+
+# Create the horizontal stacked bar chart with percentage labels
+ggplot(data_prop, aes(y = FinalSoundGroup_1, x = prop, fill = `MUEV or MIEV`)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(label = prop_label), position = position_stack(vjust = 0.5)) +  # Add percentage labels
+  scale_x_continuous(labels = scales::percent) +  # Convert x-axis to percentage
+  labs(
+    x = "Proportion",
+    y = "Final Sound Group",
+    fill = "Category"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")  + 
+  guides(fill = guide_legend(title = NULL))  # Remove legend title
+```
 
 
 
-```{r Band Dead_Obies}
+
+
+```{r MUEV/MIEV vs FinalSoundGroup_2 - viz}
+data_prop_fsg_2 <- data %>%
+  count(FinalSoundGroup_2, `MUEV or MIEV`) %>%
+  group_by(FinalSoundGroup_2) %>%
+  mutate(prop = n / sum(n),
+         prop_label = scales::percent(prop))  # Create a label column for percentages
+
+# Create the horizontal stacked bar chart with percentage labels
+ggplot(data_prop_fsg_2, aes(y = FinalSoundGroup_2, x = prop, fill = `MUEV or MIEV`)) +
+  geom_bar(stat = "identity", width = 0.7) +
+  geom_text(aes(label = prop_label), position = position_stack(vjust = 0.5)) +  # Add percentage labels
+  scale_x_continuous(labels = scales::percent) +  # Convert x-axis to percentage
+  labs(
+    x = "Proportion",
+    y = "Final Sound Group",
+    fill = "Category"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "top")  + 
+  guides(fill = guide_legend(title = NULL))  # Remove legend title
+```
+
+
+
+
+
+
+```{r Band Dead_Obies - viz}
 data <- data %>% 
   mutate(Dead_Obies = ifelse(`Artist/band...1` == 'Dead Obies', 'Dead Obie', 'Other Band/Artist'))
 
 db_tb <- table(data$`MUEV or MIEV`, data$Dead_Obies)
 
-chisq.test(do_tb)
+chisq.test(db_tb)
 
 mosaicplot(Dead_Obies ~ `MUEV or MIEV`, data = data,
            main=" ",
@@ -877,14 +901,13 @@ ggplot(data, aes(x = `Artist/band...1`, fill = `MUEV or MIEV`)) +
 ```
 
 
-```{r}
-
+```{r band overall test}
 band_tb <- table(data$`MUEV or MIEV`, data$`Artist/band...1`)
 
 chisq.test(band_tb)
 ```
 
-```{r}
+```{r band pb-pairwise}
 
 # Define the reference band
 reference_band <- "Dead Obies"
@@ -938,6 +961,10 @@ for (band in other_bands) {
   ))
 }
 
+results %>% 
+  filter(Direction == 'More MUEV')
+
+
 # Print results
 results %>% 
   arrange(desc(Significance)) %>% 
@@ -951,140 +978,96 @@ results %>%
 
 
 
-```{r}
-# Assuming your data frame is called df
 
-# Create a summary table of MUEV counts by DC and FDLC
-muev_summary <- data.frame(
-  Dictionary = c("Dictionnaire du Chilleur (DC)", "Fonds de données linguistiques du Québec (FDLC)"),
-  MUEV_Count = c(
-    sum(df$MUEV == TRUE & df$DC == TRUE),  # MUEV counts in DC
-    sum(df$MUEV == TRUE & df$FDLC == TRUE)  # MUEV counts in FDLC
-  )
-)
-
-# Bar plot to compare the counts
-library(ggplot2)
-ggplot(muev_summary, aes(x = Dictionary, y = MUEV_Count, fill = Dictionary)) +
-  geom_bar(stat = "identity") +
-  labs(title = "Comparison of MUEV Counts in DC and FDLC",
-       x = "Dictionary", y = "MUEV Count") +
-  theme_minimal() +
-  scale_fill_brewer(palette = "Set1")
-
-```
-
-```{r}
+```{r rename dictionary column}
 data <- rename(data, DC = `In Dictionnaire du Chilleur (DC)`)
 data <- rename(data, FDLQ = `In Fonds de données linguistiques du Québec (FDLQ)`)
 ```
 
 
 
-```{r}
-muev_summary <- data %>%
-  filter(`MUEV or MIEV` == "MUEV") %>%
-  group_by(DC, FDLQ) %>%
-  summarise(MUEV_Count = n()) %>%
-  pivot_longer(cols = MUEV_Count, names_to = "Count", values_to = "MUEV_Count")
+```{r Dictionary-ratio difference}
+data %>%
+  summarize(
+    MUEV_in_DC = sum(`MUEV or MIEV` == "MUEV" & DC == TRUE, na.rm = TRUE),
+    total_DC_TRUE = sum(DC == TRUE, na.rm = TRUE),
+    perc_MUEV_in_DC = (MUEV_in_DC / total_DC_TRUE) * 100,
 
-# Bar plot to compare MUEV counts in DC and FDLC
-ggplot(muev_summary, aes(x = interaction(DC, FDLQ), y = MUEV_Count, fill = interaction(DC, FDLQ))) +
-  geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Comparison of MUEV Counts by Dictionary",
-       x = "Dictionary", y = "MUEV Count") +
-  scale_fill_brewer(palette = "Set1") +
-  theme_minimal() 
+    MUEV_in_FDLQ = sum(`MUEV or MIEV` == "MUEV" & FDLQ == TRUE, na.rm = TRUE),
+    total_FDLQ_TRUE = sum(FDLQ == TRUE, na.rm = TRUE),
+    perc_MUEV_in_FDLQ = (MUEV_in_FDLQ / total_FDLQ_TRUE) * 100
+  ) %>%
+  mutate(MUEV_more_in_DC = MUEV_in_DC > MUEV_in_FDLQ) %>%
+  select(
+    MUEV_in_DC, perc_MUEV_in_DC,
+    MUEV_in_FDLQ, perc_MUEV_in_FDLQ,
+    MUEV_more_in_DC
+  )
 
-
-
-```
-```{r}
-dc_tb <- table(data$`MUEV or MIEV`, data$DC, data$FDLQ)
-
-
-collapsed_table <- apply(dc_tb, c(1, 2), sum)
-
-# Run the Chi-squared test
-chi_test <- chisq.test(collapsed_table)
-
-# Display the results
-cat("Chi-squared test result:\n")
-print(chi_test)
 ```
 
 
+```{r Contingency Table: DC}
+addmargins(table_dc)
+prop.table(table_dc, margin = 2) 
+```
 
-```{r}
-data$`In Dictionnaire du Chilleur (DC)`
+```{r Continegncy Table: FDLQ}
+addmargins(table_FDLQ)
+prop.table(table_FDLQ, margin = 2) 
+```
+
+```{r dictionar - seperate chi-square}
+table_dc <- table(data$`MUEV or MIEV`, data$DC)
+chisq.test(table_dc)
+
+
+
+table_FDLQ <- table(data$`MUEV or MIEV`, data$FDLQ) 
+chisq.test(table_FDLQ)
+```
+
+
+
+```{r DC vs FDLQ}
+prop_test_data <- matrix(c(
+  sum(data$`MUEV or MIEV` == "MUEV" & data$DC == TRUE, na.rm = TRUE),
+  sum(data$DC == TRUE, na.rm = TRUE) - sum(data$`MUEV or MIEV` == "MUEV" & data$DC == TRUE, na.rm = TRUE),
+  sum(data$`MUEV or MIEV` == "MUEV" & data$FDLQ == TRUE, na.rm = TRUE),
+  sum(data$FDLQ == TRUE, na.rm = TRUE) - sum(data$`MUEV or MIEV` == "MUEV" & data$FDLQ == TRUE, na.rm = TRUE)
+), nrow = 2, byrow = TRUE)
+
+chisq_test <- chisq.test(prop_test_data)
+
+print(chisq_test)
 ```
 
 
 
 
+```{r Contingency Table: Verb category}
+addmargins(table(data$`MUEV or MIEV`, data$`Verb category`))
 
-# Categorical Variables: Chi-square or Fisher’s Exact Test
-# Example: Verbal (Ir)Regularity by Verb Type
-table_regularity <- table(your_data$verb_type, your_data$regularity)
-chi_sq_test <- chisq.test(table_regularity)
-# If the expected frequencies are too low, use Fisher’s Exact Test
-# fisher_test <- fisher.test(table_regularity)
+prop.table(table(data$`MUEV or MIEV`, data$`Verb category`), margin = 2) 
 
-print(chi_sq_test)
-
-# Continuous Variables: T-Test or mann whitery
-# Example: Count by Verb Type
-t_test <- t.test(count ~ verb_type, data = your_data)
-mann_whitney <- wilcox.test(count ~ verb_type, data = your_data)
-
-print(t_test)
-print(mann_whitney)
-
-# Visualization: Stacked Bar Plot for Categorical Comparison
-your_data %>%
-  group_by(verb_type, regularity) %>%
-  summarize(n = n()) %>%
-  ggplot(aes(x = verb_type, y = n, fill = regularity)) +
-  geom_bar(stat = "identity", position = "stack", color = "black") +
-  labs(
-    title = "Comparison of Regularity by Verb Type",
-    x = "Verb Type",
-    y = "Count",
-    fill = "Regularity"
-  ) +
-  theme_minimal()
-
-# Visualization: Grouped Box Plot for Continuous Comparison
-your_data %>%
-  ggplot(aes(x = verb_type, y = count, fill = verb_type)) +
-  geom_boxplot(alpha = 0.8) +
-  labs(
-    title = "Comparison of Count by Verb Type",
-    x = "Verb Type",
-    y = "Count"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "none")
+```
 
 
+```{r verb category-test}
+tb_vc <- table(data$`Verb category`, data$`MUEV or MIEV`)
+
+addmargins(tb_vc)
+prop.table(table_FDLQ, margin = 2) 
+
+fisher.test(tb_vc)
+
+tb_vs_ph <- pairwiseNominalIndependence(tb_vc, fisher = TRUE, gtest = FALSE, method = "bonferroni")
+
+tb_vs_ph %>% 
+  mutate(significance = ifelse(p.adj.Fisher < 0.05, TRUE, FALSE))
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```
 
 
 
