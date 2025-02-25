@@ -196,24 +196,45 @@ raw_data %>%
 
 
 
+Following sound
+
+• Group 1: Stop & Nasal & Affricate
+
+• Group 2: Fricative
+
+• Group 3: Approximant & Lateral Approximant
+
+• Group 4: Vowel
+
+• Group 5: Zero
+
+(I moved the Affricate from Group 2 to Group 1.)
+
+Final sound
+
+• Group 1: Stop & Nasal & Affricate
+
+• Group 2: Fricative
+
+• Group 3: Approximant & Lateral Approximant
+
+• Group 4: Vowel
+
+(I moved the Affricate from Group 2 to Group 1.)
+
+
+
 
 ```{r add following sound grouping}
 data <- raw_data %>%  
   mutate(
     SoundGroup_1 = case_when(
-      `Following sound` %in% c("stop", "nasal") ~ "stop + nasal",
-      `Following sound` %in% c("fricative", "affricate") ~ "fricative + affricate",
-      #`Following sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "stop + nasal + fricative + affricate",
+      `Following sound` %in% c("stop", "nasal", "affricate") ~ "stop + nasal + affricate",
+      `Following sound` == "fricative" ~ "fricative",
       `Following sound` %in% c("approximant", "lateral approximant") ~ "approximant + lateral approximant",
       `Following sound` %in% c("vowel", "zero") ~ `Following sound`, # Keep "vowel" and "zero" as is
       TRUE ~ "Other" # For any unexpected value
-    ) ,
-    SoundGroup_2 = case_when( 
-      `Following sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "stop + nasal + fricative + affricate", 
-      `Following sound` %in% c("approximant", "lateral approximant") ~ "approximant + lateral approximant",
-      `Following sound` %in% c("vowel", "zero") ~ `Following sound`, #  
-      TRUE ~ "Other" # For any unexpected value
-    )
+    ) 
   )
 
 ```
@@ -223,10 +244,10 @@ data %>%
   group_by(`SoundGroup_1`) %>%  
   tally()
 
-
-data %>% 
-  group_by(`SoundGroup_2`) %>%  
-  tally()
+# 
+# data %>% 
+#   group_by(`SoundGroup_2`) %>%  
+#   tally()
 ```
 
 
@@ -236,7 +257,7 @@ data %>%
 ggplot(data, aes(x = SoundGroup_1)) +
   geom_bar(fill = "blue", color = "black", alpha = 0.7) +
   labs(
-    title = "Bar Chart of SoundGroup_1",
+    title = "Bar Chart of Following Sound Group",
     x = "Sound Group",
     y = "Count"
   ) +
@@ -247,17 +268,17 @@ ggplot(data, aes(x = SoundGroup_1)) +
 
 
 
-ggplot(data, aes(x = SoundGroup_2)) +
-  geom_bar(fill = "blue", color = "black", alpha = 0.7) +
-  labs(
-    title = "Bar Chart of SoundGroup_1",
-    x = "Sound Group",
-    y = "Count"
-  ) +
-  theme_minimal() + 
-    theme(
-    axis.text.x = element_text(angle = 45, hjust = 1)
-  )
+# ggplot(data, aes(x = SoundGroup_2)) +
+#   geom_bar(fill = "blue", color = "black", alpha = 0.7) +
+#   labs(
+#     title = "Bar Chart of SoundGroup_1",
+#     x = "Sound Group",
+#     y = "Count"
+#   ) +
+#   theme_minimal() + 
+#     theme(
+#     axis.text.x = element_text(angle = 45, hjust = 1)
+#   )
 ```
 ```{r following sound visual}
 
@@ -290,52 +311,90 @@ ggplot(data_summary, aes(x = `Following sound`, y = n)) +
 ```
 
 
+• Group 1: Stop & Nasal & Affricate
+
+• Group 2: Fricative
+
+• Group 3: Approximant & Lateral Approximant
+
+• Group 4: Vowel
+
+• Group 5: Zero
 
 
-```{r following sound - stacked visual - vertical, fig.width=11, fig.height= 5}
+
+
+```{r following sound - stacked visual - vertical,, fig.width=13, fig.height= 5}
+
+
+
+
+data_summary <- data_summary %>%
+  mutate(SoundGroup_1 = factor(SoundGroup_1, levels = c(
+    "stop + nasal + affricate",  
+    "fricative",  
+    "approximant + lateral approximant",  
+    "vowel",  
+    "zero"  
+  )))
+
+
 ggplot(data_summary, aes(y = SoundGroup_1, x = n, fill = `Following sound`)) + 
   geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") + 
-  geom_text( 
-    aes( 
-      label = case_when( 
-        SoundGroup_1 == "fricative + affricate" & `Following sound` == "affricate" ~ paste0("affricate: ", n), 
-        SoundGroup_1 == "approximant + lateral approximant" & `Following sound` == "approximant" ~ paste0("approximate: ", n), 
-        n > 5 ~ paste0(`Following sound`, ": ", n), # Generic labels for other groups 
-        TRUE ~ "" # Do not label very small values 
-      ), 
+  geom_text(  
+    aes(  
+      label = case_when(  
+        n > 0 ~ paste0(`Following sound`, ": ", n),  # Label only if count > 5  
+        TRUE ~ ""  # Do not label very small values  
+      ),  
       x = case_when(
-        `Following sound` == "affricate" ~ n + 10, # Move only affricate labels
-        `Following sound` == "approximant" ~ n + 15, # Move only approximate labels
-        TRUE ~ n # Default no adjustment
-      ) 
-    ), 
-    position = position_stack(vjust = 0.5), 
-    size = 3 
-  ) + 
-  labs( 
-   # title = "Count of Following Sounds", 
-    x = "Count", 
-    y = "Following Sound Group", 
-    fill = "Type of Following Sound" 
-  ) + 
-  theme_minimal() + 
-  theme( 
-    legend.position = "top" ,
-    legend.text = element_text(size = 7.5)
+        `Following sound` == "affricate" ~ n + 3,  # Move affricate labels further right  
+        `Following sound` == "approximant" ~ n + 3, # Move approximant labels further right  
+        TRUE ~ n  # Keep other labels centered in the bar  
+      ),  
+      hjust = case_when(
+        `Following sound` %in% c("affricate", "approximant") ~ 0,  # Left-align moved labels  
+        TRUE ~ 0.5  # Center-align normal labels  
+      )  
+    ),  
+    position = position_stack(vjust = 0.5), # Center most labels inside stacks  
+    size = 3  
+  ) +  
+  labs(  
+    x = "Count",  
+    y = "Following Sound Group",  
+    fill = "Type of Following Sound"  
+  ) +  
+  theme_minimal() +  
+  theme(  
+    legend.position = "top",  
+    legend.text = element_text(size = 7.5)  
   )
+
+
 ```
 
+• Group 1: Stop & Nasal & Affricate
+
+• Group 2: Fricative
+
+• Group 3: Approximant & Lateral Approximant
+
+• Group 4: Vowel
 
 
 
 
-```{r final sound - viz, fig.width=11, fig.height= 5}
+
+
+
+```{r final sound - viz, fig.width=13, fig.height= 5} 
 
 data <- data %>%
   mutate(
     FinalSoundGroup_1_text = case_when(
-      `Final sound` %in% c("stop", "nasal") ~ "stop + nasal",
-      `Final sound` %in% c("fricative", "affricate") ~ "fricative + affricate",
+      `Final sound` %in% c("stop", "nasal", "affricate") ~ "stop + nasal + affricate",
+      `Final sound` == "fricative"~ "fricative",
       `Final sound` %in% c("approximant", "lateral approximant") ~ "approximant + lateral approximant",
       `Final sound` == "vowel" ~ "vowel",
       TRUE ~ "Other" 
@@ -346,21 +405,28 @@ data_summary_fsgt <- data %>%
   tally()
 
 
+data_summary_fsgt <- data_summary_fsgt %>%
+  mutate(FinalSoundGroup_1_text = factor(FinalSoundGroup_1_text, levels = c(
+    "stop + nasal + affricate",  
+    "fricative",  
+    "approximant + lateral approximant",  
+    "vowel"
+  )))
+
+
 ggplot(data_summary_fsgt, aes(y = FinalSoundGroup_1_text, x = n, fill = `Final sound`)) + 
   geom_bar(stat = "identity", position = "stack", alpha = 0.8, color = "black") + 
   geom_text( 
     aes( 
-      label = case_when( 
-        FinalSoundGroup_1_text == "fricative + affricate" & `Final sound` == "affricate" ~ paste0("affricate: ", n), 
-        FinalSoundGroup_1_text == "approximant + lateral approximant" & `Final sound` == "approximant" ~ paste0("approximate: ", n), 
-        n > 5 ~ paste0(`Final sound`, ": ", n), # Generic labels for other groups 
-        TRUE ~ "" # Do not label very small values 
-      ), 
+       label = case_when(  
+        n > 0 ~ paste0(`Final sound`, ": ", n),  # Label only if count > 5  
+        TRUE ~ ""  # Do not label very small values  
+       ), 
       x = case_when(
         #`Final sound` == "vowel" ~ n + 55, # Move only affricate labels
-        `Final sound` == "nasal" ~ n + 35,
-        `Final sound` == "affricate" ~ n + 45, # Move only affricate labels
-        `Final sound` == "approximant" ~ n + 38, # Move only approximate labels
+        `Final sound` == "nasal" ~ n + 0.5,
+       # `Final sound` == "affricate" ~ n + 10, # Move only affricate labels
+        `Final sound` == "approximant" ~ n + 30, # Move only approximate labels
         TRUE ~ n # Default no adjustment
       ) 
     ), 
@@ -379,9 +445,6 @@ ggplot(data_summary_fsgt, aes(y = FinalSoundGroup_1_text, x = n, fill = `Final s
     legend.text = element_text(size = 7.5)
   )
 ```
-
-
-
 
 
 
@@ -644,14 +707,43 @@ rcompanion::pairwiseNominalIndependence(table(data$`Position of verb in phrase`,
 ```{r contingency table - following sound group 1}
 data <- data %>%
   mutate(`SoundGroup_1` = factor(`SoundGroup_1`, 
-                                                levels = c("stop + nasal", "fricative + affricate", "approximant + lateral approximant", "vowel", "zero"), 
+                                                levels = c("stop + nasal + affricate", "fricative", "approximant + lateral approximant", "vowel", "zero"), 
                                                 ordered = TRUE))
+
+
 
 
 addmargins(table(data$`MUEV or MIEV`, data$`SoundGroup_1`))
 round(prop.table(table(data$`MUEV or MIEV`, data$`SoundGroup_1`), margin = 2)* 100 , 1)
+
+
 ```
 
+Following sound
+
+• Group 1: Stop & Nasal & Affricate
+
+• Group 2: Fricative
+
+• Group 3: Approximant & Lateral Approximant
+
+• Group 4: Vowel
+
+• Group 5: Zero
+
+(I moved the Affricate from Group 2 to Group 1.)
+
+Final sound
+
+• Group 1: Stop & Nasal & Affricate
+
+• Group 2: Fricative
+
+• Group 3: Approximant & Lateral Approximant
+
+• Group 4: Vowel
+
+(I moved the Affricate from Group 2 to Group 1.)
 
 
 
@@ -659,21 +751,13 @@ round(prop.table(table(data$`MUEV or MIEV`, data$`SoundGroup_1`), margin = 2)* 1
 data <- data %>%
   mutate(
     SoundGroup_1 = case_when(
-      `Following sound` %in% c("stop", "nasal") ~ "group 1",
-      `Following sound` %in% c("fricative", "affricate") ~ "group 2",
+      `Following sound` %in% c("stop", "nasal", "affricate") ~ "group 1",
+      `Following sound` == "fricative" ~ "group 2",
       `Following sound` %in% c("approximant", "lateral approximant") ~ "group 3",
       `Following sound` == "vowel" ~ "group 4",
       `Following sound` == "zero" ~ "group 5",
       # "vowel" and "zero" as group 4
       TRUE ~ "Other" 
-    ),
-    SoundGroup_2 = case_when(
-      `Following sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "group 1 & group 2",
-      `Following sound` %in% c("approximant", "lateral approximant") ~ "group 3",
-      `Following sound` == "vowel" ~ "group 4",
-      `Following sound` == "zero" ~ "group 5",
-      # "vowel" and "zero" as group 4
-      TRUE ~ "Other"
     )
   )
 
@@ -718,7 +802,7 @@ data_prop_sg_1 <- data %>%
   count(SoundGroup_1, `MUEV or MIEV`) %>%
   group_by(SoundGroup_1) %>%
   mutate(prop = n / sum(n),
-         prop_label = scales::percent(prop))  # Create a label column for percentages
+         prop_label = scales::percent(prop, accuracy = 0.1))  # Create a label column for percentages
 
 # Create the horizontal stacked bar chart with percentage labels
 ggplot(data_prop_sg_1, aes(y = SoundGroup_1, x = prop, fill = `MUEV or MIEV`)) +
@@ -767,18 +851,11 @@ ggplot(data_prop_sg_2, aes(y = SoundGroup_2, x = prop, fill = `MUEV or MIEV`)) +
 data <- data %>%
   mutate(
     FinalSoundGroup_1 = case_when(
-      `Final sound` %in% c("stop", "nasal") ~ "group 1",
-      `Final sound` %in% c("fricative", "affricate") ~ "group 2",
+      `Final sound` %in% c("stop", "nasal", "affricate") ~ "group 1",
+      `Final sound` == "fricative" ~ "group 2",
       `Final sound` %in% c("approximant", "lateral approximant") ~ "group 3",
       `Final sound` == "vowel" ~ "group 4",
       TRUE ~ "Other" 
-    ),
-    FinalSoundGroup_2 = case_when(
-      `Final sound` %in% c("stop", "nasal", "fricative", "affricate") ~ "group 1 & group 2",
-      `Final sound` %in% c("approximant", "lateral approximant") ~ "group 3",
-      `Final sound` == "vowel" ~ "group 4",
-      # "vowel" and "zero" as group 4
-      TRUE ~ "Other"
     )
   )
 ```
@@ -788,7 +865,10 @@ data <- data %>%
 
 ```{r Contingency Table: Final Sound Group 1}
 addmargins(table(data$`MUEV or MIEV`, data$FinalSoundGroup_1))
-prop.table(table(data$`MUEV or MIEV`, data$FinalSoundGroup_1), margin = 2) 
+# prop.table(table(data$`MUEV or MIEV`, data$FinalSoundGroup_1), margin = 2) 
+
+round(prop.table(table(data$`MUEV or MIEV`, data$FinalSoundGroup_1), margin = 2) * 100, 1)
+
 ```
 
 
@@ -826,7 +906,7 @@ data_prop <- data %>%
   count(FinalSoundGroup_1, `MUEV or MIEV`) %>%
   group_by(FinalSoundGroup_1) %>%
   mutate(prop = n / sum(n),
-         prop_label = scales::percent(prop))  # Create a label column for percentages
+         prop_label = scales::percent(prop,accuracy = 0.1))  # Create a label column for percentages
 
 # Create the horizontal stacked bar chart with percentage labels
 ggplot(data_prop, aes(y = FinalSoundGroup_1, x = prop, fill = `MUEV or MIEV`)) +
