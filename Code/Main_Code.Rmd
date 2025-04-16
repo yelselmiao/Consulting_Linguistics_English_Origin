@@ -979,6 +979,30 @@ ggplot(data, aes(x = `Artist/band...1`, fill = `MUEV or MIEV`)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  
 
 ```
+```{r}
+ggplot(data %>% filter(`Artist/band...1` != 'Dawamafia'), aes(x = `Artist/band...1`, fill = `MUEV or MIEV`)) +
+  geom_bar(position = "fill") +  # Stacks bars to 100% scale
+  scale_y_continuous(labels = scales::percent_format()) +  # Convert y-axis to percentage
+  labs(x = "Band or Artist", y = "Percentage", fill = "MUEV vs MIEV") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  
+```
+```{r}
+band_perc <- data %>% filter(`Artist/band...1` != 'Dawamafia') %>%  
+  group_by(`Artist/band...1`, `MUEV or MIEV`) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  group_by(`Artist/band...1`) %>%
+  mutate(percentage = round(n / sum(n) * 100)) %>%
+  select(-n) %>%
+  pivot_wider(
+    names_from = `MUEV or MIEV`, 
+    values_from = percentage, 
+    names_glue = "{`MUEV or MIEV`} %"
+  )
+
+writexl::write_xlsx(band_perc, "~/Downloads/MUEV_MIEV_percentages.xlsx")
+
+```
 
 
 ```{r band overall test}
